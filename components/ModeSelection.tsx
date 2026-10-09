@@ -4,10 +4,11 @@ type Props = {
   visible: boolean;
   onLocal: () => void;
   onComputer: () => void;
+  onOnline: () => void;
   onClose: () => void;
 };
 
-export default function ModeSelection({ visible, onLocal, onComputer, onClose }: Props) {
+export default function ModeSelection({ visible, onLocal, onComputer, onOnline, onClose }: Props) {
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
@@ -23,13 +24,10 @@ export default function ModeSelection({ visible, onLocal, onComputer, onClose }:
               style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
               <Text style={styles.buttonText}>Vs Computer</Text>
             </Pressable>
-            {['Online Multiplayer'].map(mode => (
-              <Pressable key={mode} accessibilityRole="button" disabled
-                accessibilityLabel={mode + ', coming soon'} style={[styles.button, styles.disabled]}>
-                <Text style={styles.disabledText}>{mode}</Text>
-                <Text style={styles.comingSoon}>Coming soon</Text>
-              </Pressable>
-            ))}
+            <Pressable accessibilityRole="button" onPress={onOnline}
+              style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+              <Text style={styles.buttonText}>Online Multiplayer</Text>
+            </Pressable>
             <Pressable accessibilityRole="button" onPress={onClose}
               style={({ pressed }) => [styles.button, styles.disabled, pressed && styles.pressed]}>
               <Text style={styles.disabledText}>Back to Games</Text>
