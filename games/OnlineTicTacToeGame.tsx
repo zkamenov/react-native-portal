@@ -91,11 +91,13 @@ export default function OnlineTicTacToeGame({ onBack }: { onBack: () => void }) 
   const board = state?.board ?? createBoard();
   const result = state?.result ?? getResult(board);
   const names = state?.playerNames ?? { X: null, O: null };
+  const myName = displayName || 'You';
   const opponentName = symbol ? (symbol === 'X' ? names.O : names.X) ?? 'Opponent' : 'Opponent';
+  const opponentSymbol = symbol === 'X' ? 'O' : 'X';
   const isMyTurn = Boolean(symbol && state && state.currentTurn === symbol && state.result === null);
   const statusText = result === null
     ? isMyTurn
-      ? `${displayName || 'You'}'s turn`
+      ? `${myName}'s turn`
       : `${opponentName}'s turn`
     : result === 'draw'
       ? "It's a draw!"
@@ -181,7 +183,18 @@ export default function OnlineTicTacToeGame({ onBack }: { onBack: () => void }) 
       <Text style={styles.brand}>GamePortal</Text>
       <Text style={styles.title}>Online Tic-Tac-Toe</Text>
       <Text style={styles.subtitle}>Room code: {roomId}</Text>
-      <Text style={styles.subtitle}>You are {displayName || 'Player'} ({symbol})</Text>
+      <View style={styles.playerRow}>
+        <View style={styles.playerCard}>
+          <Text style={styles.playerLabel}>You</Text>
+          <Text style={styles.playerName}>{myName}</Text>
+          <Text style={styles.playerSymbol}>{symbol ?? 'X'}</Text>
+        </View>
+        <View style={styles.playerCard}>
+          <Text style={styles.playerLabel}>Opponent</Text>
+          <Text style={styles.playerName}>{opponentName}</Text>
+          <Text style={styles.playerSymbol}>{opponentSymbol}</Text>
+        </View>
+      </View>
       <Text style={styles.status}>{statusText}</Text>
       {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
       <View style={styles.board}>
@@ -216,6 +229,11 @@ const styles = StyleSheet.create({
   title: { fontSize: 30, fontWeight: '700', color: '#172033' },
   subtitle: { fontSize: 15, color: '#64748b', marginTop: 8 },
   status: { fontSize: 22, fontWeight: '700', color: '#172033', marginVertical: 20 },
+  playerRow: { flexDirection: 'row', gap: 12, marginTop: 8, marginBottom: 4 },
+  playerCard: { flex: 1, backgroundColor: '#edf1f7', borderRadius: 12, padding: 12, borderWidth: 1, borderColor: '#dbe4f0' },
+  playerLabel: { fontSize: 12, fontWeight: '700', color: '#64748b', letterSpacing: 1.2, textTransform: 'uppercase' },
+  playerName: { fontSize: 18, fontWeight: '700', color: '#172033', marginTop: 6 },
+  playerSymbol: { fontSize: 28, fontWeight: '800', color: '#2855c5', marginTop: 4 },
   card: { gap: 12, marginTop: 16 },
   input: { backgroundColor: '#fff', borderWidth: 1, borderColor: '#cbd5e1', borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: '#172033' },
   primaryButton: { minHeight: 48, padding: 14, borderRadius: 10, backgroundColor: '#2855c5', alignItems: 'center', justifyContent: 'center' },
