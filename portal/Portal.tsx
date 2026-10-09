@@ -4,6 +4,7 @@ import DiscoverScreen from '../screens/DiscoverScreen';
 import MyMatchesScreen from '../screens/MyMatchesScreen';
 import ModeSelection from '../components/ModeSelection';
 import TicTacToeGame from '../games/TicTacToeGame';
+import OnlineTicTacToeGame from '../games/OnlineTicTacToeGame';
 import useLocalMatches from './useLocalMatches';
 
 export default function Portal() {
@@ -12,6 +13,7 @@ export default function Portal() {
   const { matches, loaded, loadError, saveStatus, retryLoad, startMatch, move } = useLocalMatches();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [computerGame, setComputerGame] = useState(false);
+  const [onlineGame, setOnlineGame] = useState(false);
   const [showModes, setShowModes] = useState(false);
 
   const selectedMatch = matches.find(match => match.id === selectedId);
@@ -19,12 +21,14 @@ export default function Portal() {
   function startLocalMatch() {
     setSelectedId(startMatch());
     setComputerGame(false);
+    setOnlineGame(false);
     setShowModes(false);
   }
 
   function leaveGame() {
     setSelectedId(null);
     setComputerGame(false);
+    setOnlineGame(false);
   }
 
   if (!loaded) {
@@ -68,6 +72,8 @@ export default function Portal() {
           }} />
       ) : computerGame ? (
         <TicTacToeGame mode="computer" onBack={leaveGame} />
+      ) : onlineGame ? (
+        <OnlineTicTacToeGame onBack={leaveGame} />
       ) : tab === 'discover' ? (
         <DiscoverScreen search={search} onSearch={setSearch} onChooseMode={() => setShowModes(true)} />
       ) : (
@@ -75,7 +81,8 @@ export default function Portal() {
       )}
       <ModeSelection visible={showModes} onClose={() => setShowModes(false)}
         onLocal={startLocalMatch}
-        onComputer={() => { setShowModes(false); setComputerGame(true); }} />
+        onComputer={() => { setShowModes(false); setComputerGame(true); }}
+        onOnline={() => { setShowModes(false); setOnlineGame(true); }} />
     </View>
   );
 }
