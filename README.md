@@ -2,7 +2,7 @@
 
 A React Native game portal built with Expo SDK 54 and TypeScript for the Multiplayer Games course.
 
-The current prototype allows users to discover games, choose a play mode, play Tic-Tac-Toe locally or against a computer opponent, and manage local matches across sessions.
+The current prototype allows users to discover games, choose a play mode, play Tic-Tac-Toe locally, via internet, or against a computer opponent, and manage local matches across sessions.
 
 ## Features
 
@@ -13,7 +13,7 @@ The current prototype allows users to discover games, choose a play mode, play T
 - Responsive layout for web and mobile
 
 ### Tic-Tac-Toe
-- Local 2-player mode
+- Local and Internet 2-player mode
 - Vs Computer mode
 - Turn management
 - Win and draw detection
@@ -115,6 +115,11 @@ Run the Expo web export:
     npx expo export --platform web
 
 The current implementation passes 22 automated tests as well as the TypeScript and Expo web export checks.
+To include online Multiplayer testing, run in a second terminal window:
+
+    npm run server
+
+Then you can test on an android device or through a web browser
 
 ## Demo Flow
 
@@ -135,7 +140,6 @@ A simple demo of the current portal:
 This prototype focuses on the React Native portal experience and local gameplay.
 
 Currently not implemented:
-- Online multiplayer
 - Authentication
 - Backend integration
 - Invitations
