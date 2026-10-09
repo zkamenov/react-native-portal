@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Board, Player, createBoard, getResult, getCurrentPlayer } from './ticTacToe';
 
+declare const process: { env: { EXPO_PUBLIC_GAME_SERVER_URL?: string } };
+
 type OnlineState = {
   roomId: string;
   board: Board;
@@ -11,8 +13,14 @@ type OnlineState = {
   playerNames: Record<'X' | 'O', string | null>;
 };
 
-const DEFAULT_SERVER_URL = Platform.OS === 'android' ? 'ws://10.0.2.2:4010' : 'ws://localhost:4010';
-const SERVER_URL = (globalThis as any)?.process?.env?.EXPO_PUBLIC_GAME_SERVER_URL ?? DEFAULT_SERVER_URL;
+const webHost = typeof window !== 'undefined' ? window.location.hostname : 'localhost';
+const DEFAULT_SERVER_HOST = Platform.OS === 'android'
+  ? '10.0.2.2'
+  : Platform.OS === 'web'
+    ? webHost
+    : 'localhost';
+const DEFAULT_SERVER_URL = `ws://${DEFAULT_SERVER_HOST}:4010`;
+const SERVER_URL = process.env.EXPO_PUBLIC_GAME_SERVER_URL ?? DEFAULT_SERVER_URL;
 
 export default function OnlineTicTacToeGame({ onBack }: { onBack: () => void }) {
   const socketRef = useRef<WebSocket | null>(null);

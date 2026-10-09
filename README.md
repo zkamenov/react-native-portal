@@ -96,6 +96,28 @@ Or start Expo:
 
     npm start
 
+### Play online over a local network
+
+Run the game server and Expo web app in separate terminals, on the same computer:
+
+    npm run server
+    npm run web -- --host lan
+
+Open the Expo LAN URL on the host computer and the second device. The web client
+uses the page's hostname to connect to the game server on port 4010. Both devices
+must be on the same network, and the host firewall must allow inbound connections
+to ports 8081 (Expo) and 4010 (game server). Do not use `localhost` from the
+second device; it refers to that device itself.
+
+For the Android emulator, the game client uses `10.0.2.2` to reach the host
+computer. For a physical device running the native app, set
+`EXPO_PUBLIC_GAME_SERVER_URL` to the host computer's LAN address, for example:
+
+    EXPO_PUBLIC_GAME_SERVER_URL=ws://192.168.1.20:4010 npm start -- --host lan
+
+Replace the example address with the host computer's actual LAN IP. The game
+server still needs to be running, and its selected port must match the URL.
+
 For mobile testing, use Expo Go with a version compatible with Expo SDK 54.
 
 An iOS simulator requires macOS.

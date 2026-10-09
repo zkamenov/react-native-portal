@@ -8,7 +8,7 @@ server.on('error', (error) => {
   console.error('WebSocket server failed to start:');
   console.error(error.message);
   if (error.code === 'EADDRINUSE') {
-    console.error(`Port ${PORT} is already in use. Stop the other server or run with PORT=4011 npm run server.`);
+    console.error(`Port ${PORT} is already in use. Stop the other server or try PORT=${PORT + 1} npm run server.`);
   }
   process.exit(1);
 });
@@ -221,4 +221,6 @@ server.on('connection', (socket) => {
   });
 });
 
-console.log(`Online Tic-Tac-Toe server listening on ws://0.0.0.0:${PORT}`);
+server.on('listening', () => {
+  console.log(`Online Tic-Tac-Toe server listening on ws://0.0.0.0:${PORT}`);
+});
