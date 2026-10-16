@@ -24,6 +24,11 @@ export default function TicTacToeGame({ onBack, mode = 'local', localMatch, read
   useEffect(() => {
     if (!computerTurn) return;
     const timer = setTimeout(() => {
+      if (localMatch) {
+        const index = chooseComputerMove(board);
+        if (index !== null) localMatch.onMove(index);
+        return;
+      }
       setBoard(current => {
         // Ignore a stale callback after Play Again.
         if (current !== board) return current;
@@ -32,7 +37,7 @@ export default function TicTacToeGame({ onBack, mode = 'local', localMatch, read
       });
     }, 400);
     return () => clearTimeout(timer);
-  }, [board, computerTurn]);
+  }, [board, computerTurn, localMatch]);
 
   function handleMove(index: number) {
     if (localMatch) { localMatch.onMove(index); return; }
@@ -98,4 +103,3 @@ const styles = StyleSheet.create({
   backText: { fontSize: 16, fontWeight: '700', color: '#334155' },
   pressed: { opacity: 0.8 },
 });
-

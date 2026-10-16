@@ -19,7 +19,12 @@ const bridgeScript = `
   true;
 `;
 
-export default function HostedGameView({ code, stateMessage, readOnly = false, onMove }: Props) {
+export default function HostedGameView({
+  code,
+  stateMessage,
+  readOnly = false,
+  onMove,
+}: Props) {
   const webView = useRef<WebView>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -34,8 +39,11 @@ export default function HostedGameView({ code, stateMessage, readOnly = false, o
   function handleMessage(event: WebViewMessageEvent) {
     try {
       const message: unknown = JSON.parse(event.nativeEvent.data);
-      if (!readOnly && message && typeof message === 'object' && !Array.isArray(message)) {
-        onMove(message as Record<string, unknown>);
+      if (message && typeof message === 'object' && !Array.isArray(message)) {
+        const record = message as Record<string, unknown>;
+        if (!readOnly) {
+          onMove(record);
+        }
       }
     } catch (error) {
       console.error('Could not read a hosted game message:', error);

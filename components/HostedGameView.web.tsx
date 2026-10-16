@@ -9,7 +9,12 @@ type Props = {
   onMove: (message: Record<string, unknown>) => void;
 };
 
-export default function HostedGameView({ code, stateMessage, readOnly = false, onMove }: Props) {
+export default function HostedGameView({
+  code,
+  stateMessage,
+  readOnly = false,
+  onMove,
+}: Props) {
   const frame = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -23,7 +28,9 @@ export default function HostedGameView({ code, stateMessage, readOnly = false, o
   }, [onMove, readOnly]);
 
   useEffect(() => {
-    frame.current?.contentWindow?.postMessage(stateMessage, '*');
+    const target = frame.current?.contentWindow;
+    if (!target) return;
+    target.postMessage(stateMessage, '*');
   }, [stateMessage]);
 
   return (
@@ -33,7 +40,10 @@ export default function HostedGameView({ code, stateMessage, readOnly = false, o
         title="Hosted game"
         srcDoc={code}
         sandbox="allow-scripts"
-        style={frameStyle}
+        style={{
+          ...frameStyle,
+          pointerEvents: readOnly ? 'none' : 'auto',
+        }}
         onLoad={() => frame.current?.contentWindow?.postMessage(stateMessage, '*')}
         aria-readonly={readOnly}
       />

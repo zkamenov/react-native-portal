@@ -41,7 +41,25 @@ export type BuildplayMatch = {
 
 const API_URL = (process.env.EXPO_PUBLIC_BUILDPLAY_API_URL ?? 'https://buildplay.fun').replace(/\/+$/, '');
 const USER_STORAGE_KEY = 'gameportal.buildplay-user.v1';
+const DOWNLOADED_GAMES_STORAGE_KEY = 'gameportal.downloaded-games.v1';
 const TICTACTOE_GAME_ID = 'tictactoe';
+let downloadWriteQueue = Promise.resolve();
+
+function isBuildplayGame(value: unknown): value is BuildplayGame {
+  if (!value || typeof value !== 'object') return false;
+  const game = value as Partial<BuildplayGame>;
+  return typeof game.id === 'string'
+    && Number.isInteger(game.version)
+    && typeof game.name === 'string'
+    && typeof game.description === 'string'
+    && Array.isArray(game.allowed_player_counts)
+    && game.allowed_player_counts.length > 0
+    && game.allowed_player_counts.every(count => Number.isInteger(count) && count > 0)
+    && typeof game.allows_leave_mid_match === 'boolean'
+    && typeof game.allows_join_mid_match === 'boolean'
+    && typeof game.code === 'string'
+    && game.code.length > 0;
+}
 
 async function request<T>(
   path: string,
@@ -95,18 +113,54 @@ export async function listBuildplayGames(): Promise<BuildplayGame[]> {
   const games = await request<BuildplayGame[]>('/games');
   if (!Array.isArray(games)) throw new Error('buildplay.fun returned an invalid game catalog.');
   return games.filter(game =>
-    game && typeof game.id === 'string'
-    && Number.isInteger(game.version)
-    && typeof game.name === 'string'
-    && typeof game.description === 'string'
-    && Array.isArray(game.allowed_player_counts)
+    isBuildplayGame(game)
     && game.allowed_player_counts.length > 0
-    && typeof game.code === 'string'
-    && game.code.length > 0
     && game.id !== 'debug'
     && !/debug/i.test(game.name)
     && !/deployment check/i.test(game.name),
   );
+}
+
+export async function listOpenBuildplayMatches(): Promise<BuildplayMatch[]> {
+  const matches = await request<BuildplayMatch[]>('/matches/open');
+  if (!Array.isArray(matches)) throw new Error('buildplay.fun returned an invalid open match list.');
+  return matches.filter(match =>
+    match
+    && typeof match.id === 'string'
+    && typeof match.game_id === 'string'
+    && Number.isInteger(match.game_version)
+    && match.status === 'waiting_for_players'
+    && Array.isArray(match.players),
+  );
+}
+
+export async function getDownloadedBuildplayGames(): Promise<BuildplayGame[]> {
+  const raw = await AsyncStorage.getItem(DOWNLOADED_GAMES_STORAGE_KEY);
+  if (raw === null) return [];
+  let downloaded: unknown;
+  try {
+    downloaded = JSON.parse(raw);
+  } catch {
+    throw new Error('Downloaded game data is invalid. Clear the app storage and download the games again.');
+  }
+  if (!Array.isArray(downloaded) || !downloaded.every(isBuildplayGame)) {
+    throw new Error('Downloaded game data is invalid. Clear the app storage and download the games again.');
+  }
+  return downloaded;
+}
+
+export async function downloadBuildplayGame(game: BuildplayGame): Promise<void> {
+  if (!isBuildplayGame(game)) throw new Error('Cannot download invalid game data.');
+  const write = downloadWriteQueue.then(async () => {
+    const downloaded = await getDownloadedBuildplayGames();
+    const updated = [
+      ...downloaded.filter(item => item.id !== game.id || item.version !== game.version),
+      game,
+    ];
+    await AsyncStorage.setItem(DOWNLOADED_GAMES_STORAGE_KEY, JSON.stringify(updated));
+  });
+  downloadWriteQueue = write.catch(() => undefined);
+  return write;
 }
 
 export function createBuildplayMatch(gameId: string, user: BuildplayUser): Promise<BuildplayMatch> {

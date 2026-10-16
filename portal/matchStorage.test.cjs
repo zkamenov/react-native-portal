@@ -58,6 +58,16 @@ test('reload restores active and finished records without duplicates or id chang
   assert.equal((await createMatchStorage(storage).load()).length, 3);
 });
 
+test('computer matches retain their mode and progress after reload', async () => {
+  const storage = memoryStorage();
+  const matches = moveInMatch([createMatch('5', 'computer')], '5', 0);
+  await createMatchStorage(storage).save(matches);
+  const restored = await createMatchStorage(storage).load();
+  assert.equal(restored[0].mode, 'computer');
+  assert.equal(restored[0].board[0], 'X');
+  assert.equal(restored[0].currentTurn, 'O');
+});
+
 test('O wins and draws retain their finished result across reload', async () => {
   for (const [moves, result] of [
     [[0,3,1,4,8,5], 'O'], [[0,1,2,4,3,5,7,6,8], 'draw'],

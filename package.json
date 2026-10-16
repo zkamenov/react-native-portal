@@ -8,8 +8,10 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
+    "build:web": "node scripts/build-web.cjs",
+    "test:web-offline": "node --test scripts/offline-web.test.cjs",
     "typecheck": "tsc --noEmit",
-    "test": "node --test games/ticTacToe.test.cjs portal/matches.test.cjs portal/matchStorage.test.cjs portal/buildplayApi.test.cjs portal/buildplayGameProtocol.test.cjs"
+    "test": "node --test games/ticTacToe.test.cjs portal/matches.test.cjs portal/matchStorage.test.cjs portal/buildplayApi.test.cjs portal/buildplayGameProtocol.test.cjs portal/buildplay/buildplay.test.cjs"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",

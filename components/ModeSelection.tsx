@@ -4,13 +4,14 @@ import { BuildplayGame } from '../portal/buildplayApi';
 type Props = {
   visible: boolean;
   game: BuildplayGame | null;
+  downloaded: boolean;
   onLocal: () => void;
   onComputer: () => void;
   onOnline: () => void;
   onClose: () => void;
 };
 
-export default function ModeSelection({ visible, game, onLocal, onComputer, onOnline, onClose }: Props) {
+export default function ModeSelection({ visible, game, downloaded, onLocal, onComputer, onOnline, onClose }: Props) {
   const hasLocalModes = game?.id === 'tictactoe';
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -30,6 +31,11 @@ export default function ModeSelection({ visible, game, onLocal, onComputer, onOn
                   <Text style={styles.buttonText}>Vs Computer</Text>
                 </Pressable>
               </>
+            ) : null}
+            {!hasLocalModes && downloaded ? (
+              <Text style={styles.comingSoon}>
+                Offline computer play is not available for this game yet. It needs a game-specific opponent.
+              </Text>
             ) : null}
             <Pressable accessibilityRole="button" onPress={onOnline}
               style={({ pressed }) => [styles.button, pressed && styles.pressed]}>

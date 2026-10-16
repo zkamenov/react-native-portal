@@ -7,7 +7,7 @@ export default function MyMatchesScreen({ matches, onOpen }: Props) {
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <Text style={styles.title} accessibilityRole="header">My Matches</Text>
-      <Text style={styles.note}>Games saved on this device. Online matches show their latest saved snapshot.</Text>
+      <Text style={styles.note}>Active online matches reconnect so you can continue playing. Finished matches show their saved snapshot.</Text>
       {(['active', 'finished'] as const).map(status => {
         const section = matches.filter(match => match.status === status);
         return (
@@ -18,8 +18,13 @@ export default function MyMatchesScreen({ matches, onOpen }: Props) {
               <Pressable key={match.id} accessibilityRole="button" onPress={() => onOpen(match.id)}
                 style={({ pressed }) => [styles.card, pressed && { opacity: 0.8 }]}>
                 <Text style={styles.name}>{match.gameName}</Text>
+                {match.source === 'local' ? (
+                  <Text style={styles.note}>{match.mode === 'computer' ? 'Vs Computer' : 'Local 2 Players'}</Text>
+                ) : null}
                 <Text style={styles.note}>{match.source === 'online'
-                  ? `Online match ${match.serverMatchId} · saved offline`
+                  ? match.status === 'active'
+                    ? `Online match ${match.serverMatchId} · tap to resume`
+                    : `Online match ${match.serverMatchId} · saved snapshot`
                   : `Match ${match.id}`}</Text>
                 <Text style={styles.status}>{matchStatusLabel(match)}</Text>
               </Pressable>

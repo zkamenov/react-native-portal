@@ -30,6 +30,18 @@ test('new matches have independent boards, ids, and active X status', () => {
   assert.equal(matchStatusLabel(first), "Player X's turn");
 });
 
+test('computer mode is stored on its match while retaining normal move rules', () => {
+  const match = createMatch('3', 'computer');
+  assert.equal(match.mode, 'computer');
+  assert.equal(createMatch('4').mode, undefined);
+  const afterHumanMove = moveInMatch([match], '3', 0);
+  const computerMove = rules.chooseComputerMove(afterHumanMove[0].board);
+  const moved = moveInMatch(afterHumanMove, '3', computerMove);
+  assert.equal(moved[0].mode, 'computer');
+  assert.equal(moved[0].board[computerMove], 'O');
+  assert.equal(moved[0].currentTurn, 'X');
+});
+
 test('leaving and reopening keeps the board and turn in the match collection', () => {
   const original = [createMatch('1'), createMatch('2')];
   const updated = play(original, '1', [0, 3]);

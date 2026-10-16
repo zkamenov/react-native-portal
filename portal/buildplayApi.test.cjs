@@ -125,3 +125,55 @@ test('catalog and pinned game versions use documented public routes', async () =
     'https://buildplay.fun/games/sample-game/versions/2',
   ]);
 });
+
+test('open match listing uses the public endpoint and only returns waiting matches', async () => {
+  const calls = [];
+  const waiting = {
+    id: 'waiting-match',
+    game_id: 'sample-game',
+    game_version: 2,
+    owner_user_id: 'user-1',
+    status: 'waiting_for_players',
+    end_reason: null,
+    players: [{ player_index: 0, kind: 'human', user_id: 'user-1' }],
+    turn_of_player_indices: null,
+    state: null,
+    move_count: 0,
+  };
+  const api = loadApi({}, async url => {
+    calls.push(url);
+    return response([waiting, { ...waiting, id: 'in-progress', status: 'ongoing' }]);
+  });
+  assert.deepEqual(JSON.parse(JSON.stringify(await api.listOpenBuildplayMatches())), [waiting]);
+  assert.deepEqual(calls, ['https://buildplay.fun/matches/open']);
+});
+
+test('downloaded games are saved by game version and can be loaded without the catalog', async () => {
+  const values = new Map();
+  const storage = {
+    async getItem(key) { return values.get(key) ?? null; },
+    async setItem(key, value) { values.set(key, value); },
+  };
+  const api = loadApi(storage, async () => { throw new Error('Network should not be used'); });
+  const game = { id: 'sample-game', version: 1, name: 'Sample Game', description: 'Description',
+    allowed_player_counts: [2], allows_leave_mid_match: false, allows_join_mid_match: true, code: '<html></html>' };
+  await Promise.all([
+    api.downloadBuildplayGame(game),
+    api.downloadBuildplayGame({ ...game, id: 'another-game', name: 'Another Game' }),
+  ]);
+  await api.downloadBuildplayGame({ ...game, version: 2, code: '<html>new</html>' });
+  assert.deepEqual(JSON.parse(JSON.stringify(await api.getDownloadedBuildplayGames())), [
+    game,
+    { ...game, id: 'another-game', name: 'Another Game' },
+    { ...game, version: 2, code: '<html>new</html>' },
+  ]);
+});
+
+test('invalid saved downloaded game data is reported explicitly', async () => {
+  const storage = {
+    async getItem() { return '{not json'; },
+    async setItem() {},
+  };
+  const api = loadApi(storage, async () => { throw new Error('Network should not be used'); });
+  await assert.rejects(api.getDownloadedBuildplayGames(), /Downloaded game data is invalid/);
+});

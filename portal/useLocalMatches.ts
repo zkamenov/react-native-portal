@@ -52,8 +52,8 @@ export default function useLocalMatches() {
     return () => { cancelled = true; };
   }, [matches, loaded]);
 
-  function startMatch(): string {
-    const match = createMatch(String(nextId.current++));
+  function startMatch(mode: 'local' | 'computer' = 'local'): string {
+    const match = createMatch(String(nextId.current++), mode);
     setMatches(current => [...current, match]);
     return match.id;
   }

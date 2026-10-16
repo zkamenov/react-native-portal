@@ -20,6 +20,8 @@ type Props = {
   game: BuildplayGame;
   onBack: () => void;
   onSaveMatch: (game: BuildplayGame, match: BuildplayMatch, playerIndex: number) => void;
+  joinMatchId?: string;
+  resumeMatchId?: string;
 };
 
 function getPlayerIndex(match: BuildplayMatch, user: BuildplayUser): number {
@@ -31,7 +33,7 @@ function canStartMatch(match: BuildplayMatch, game: BuildplayGame): boolean {
     && match.players.every(player => player.kind === 'computer' || player.user_id !== null);
 }
 
-export default function OnlineBuildplayGame({ game, onBack, onSaveMatch }: Props) {
+export default function OnlineBuildplayGame({ game, onBack, onSaveMatch, joinMatchId, resumeMatchId }: Props) {
   const [activeGame, setActiveGame] = useState(game);
   const [match, setMatch] = useState<BuildplayMatch | null>(null);
   const [matchIdInput, setMatchIdInput] = useState('');
@@ -42,7 +44,9 @@ export default function OnlineBuildplayGame({ game, onBack, onSaveMatch }: Props
   const [busy, setBusy] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [stateSync, setStateSync] = useState(0);
+  const [resumeRetry, setResumeRetry] = useState(0);
   const startedMatches = useRef(new Set<string>());
+  const joinAttempted = useRef(false);
   const moveInProgress = useRef(false);
   const onSaveMatchRef = useRef(onSaveMatch);
   onSaveMatchRef.current = onSaveMatch;
@@ -86,8 +90,8 @@ export default function OnlineBuildplayGame({ game, onBack, onSaveMatch }: Props
     }
   }
 
-  async function joinMatch() {
-    const id = matchIdInput.trim();
+  async function joinMatch(matchId = matchIdInput.trim()) {
+    const id = matchId.trim();
     if (!id) {
       setErrorMessage('Enter a match ID to join.');
       return;
@@ -115,6 +119,52 @@ export default function OnlineBuildplayGame({ game, onBack, onSaveMatch }: Props
       setBusy(false);
     }
   }
+
+  useEffect(() => {
+    if (joinMatchId && identityLoaded && !joinAttempted.current) {
+      joinAttempted.current = true;
+      void joinMatch(joinMatchId);
+    }
+  }, [identityLoaded, joinMatchId]);
+
+  useEffect(() => {
+    if (resumeMatchId === undefined || !identityLoaded) return;
+    const matchId: string = resumeMatchId;
+    if (!user) {
+      setErrorMessage('Could not find the saved player account needed to resume this match.');
+      return;
+    }
+    const currentUser = user;
+    let cancelled = false;
+
+    async function resumeMatch() {
+      setBusy(true);
+      setErrorMessage('');
+      try {
+        const latest = await getBuildplayMatch(matchId);
+        if (latest.game_id !== game.id) {
+          throw new Error('The server returned a match for a different game.');
+        }
+        const index = getPlayerIndex(latest, currentUser);
+        if (index < 0) throw new Error('Your saved player account is no longer listed in this match.');
+        const versionedGame = latest.game_version === game.version
+          ? game
+          : await getBuildplayGameVersion(latest.game_id, latest.game_version);
+        if (cancelled) return;
+        setActiveGame(versionedGame);
+        setPlayerIndex(index);
+        setMatch(latest);
+        onSaveMatchRef.current(versionedGame, latest, index);
+      } catch (error) {
+        if (!cancelled) setErrorMessage(error instanceof Error ? error.message : String(error));
+      } finally {
+        if (!cancelled) setBusy(false);
+      }
+    }
+
+    void resumeMatch();
+    return () => { cancelled = true; };
+  }, [game, identityLoaded, resumeMatchId, resumeRetry, user]);
 
   const activeMatchId = match?.id ?? null;
   useEffect(() => {
@@ -172,7 +222,7 @@ export default function OnlineBuildplayGame({ game, onBack, onSaveMatch }: Props
 
   async function handleGameMessage(message: Record<string, unknown>) {
     if (message.type !== 'make_move') return;
-    if (!match || !user || busy || moveInProgress.current) return;
+    if (!match || match.status !== 'ongoing' || !user || busy || moveInProgress.current) return;
     if (!Object.prototype.hasOwnProperty.call(message, 'new_state')) {
       setErrorMessage('The game sent a move without an updated state.');
       return;
@@ -208,6 +258,26 @@ export default function OnlineBuildplayGame({ game, onBack, onSaveMatch }: Props
   );
 
   if (!match || playerIndex === null) {
+    if (resumeMatchId) {
+      return (
+        <ScrollView contentContainerStyle={styles.content}>
+          <Text style={styles.brand}>GamePortal</Text>
+          <Text style={styles.title}>{activeGame.name}</Text>
+          <Text style={styles.subtitle}>Resume online match · {resumeMatchId}</Text>
+          {busy ? <Text style={styles.status}>Reconnecting to match…</Text> : null}
+          {errorMessage ? <Text style={styles.error}>{errorMessage}</Text> : null}
+          {!busy && errorMessage ? (
+            <Pressable accessibilityRole="button" onPress={() => setResumeRetry(current => current + 1)}
+              style={({ pressed }) => [styles.primaryButton, pressed && styles.pressed]}>
+              <Text style={styles.buttonText}>Try Again</Text>
+            </Pressable>
+          ) : null}
+          <Pressable accessibilityRole="button" onPress={onBack} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>
+            <Text style={styles.backText}>Back to My Matches</Text>
+          </Pressable>
+        </ScrollView>
+      );
+    }
     return (
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.brand}>GamePortal</Text>
@@ -269,6 +339,7 @@ export default function OnlineBuildplayGame({ game, onBack, onSaveMatch }: Props
         key={`${activeGame.id}:${activeGame.version}`}
         code={activeGame.code}
         stateMessage={gameStateMessage}
+        readOnly={match.status === 'over'}
         onMove={message => { void handleGameMessage(message); }}
       />
       <Pressable accessibilityRole="button" onPress={onBack} style={({ pressed }) => [styles.backButton, pressed && styles.pressed]}>

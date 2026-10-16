@@ -15,6 +15,7 @@ export function decodeMatches(raw: string | null): LocalMatch[] {
     if (!match || typeof match.id !== 'string' || !/^[1-9]\d*$/.test(match.id)
       || !Number.isSafeInteger(Number(match.id)) || Number(match.id) >= Number.MAX_SAFE_INTEGER
       || ids.has(match.id) || typeof match.gameName !== 'string' || !match.gameName.trim()
+      || !(match.mode === undefined || match.mode === 'local' || match.mode === 'computer')
       || !Array.isArray(match.board) || match.board.length !== 9
       || !match.board.every((cell: unknown) => cell === null || cell === 'X' || cell === 'O')) {
       throw new Error('Invalid match data');
@@ -30,6 +31,9 @@ export function decodeMatches(raw: string | null): LocalMatch[] {
     }
     if (source === 'local' && match.gameName !== 'Tic-Tac-Toe') {
       throw new Error('Invalid local game name');
+    }
+    if (source === 'online' && match.mode !== undefined) {
+      throw new Error('Invalid online match mode');
     }
     if (source === 'online' && match.gameId !== undefined
       && (typeof match.gameId !== 'string' || !match.gameId

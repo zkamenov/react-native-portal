@@ -7,6 +7,7 @@ export type LocalMatch = {
   status: 'active' | 'finished';
   currentTurn: Player | null;
   result: Player | 'draw' | null;
+  mode?: 'local' | 'computer';
   source: 'local' | 'online';
   serverMatchId?: string;
   playerIndex?: number;
@@ -18,10 +19,11 @@ export type LocalMatch = {
   onlineState?: unknown;
 };
 
-export function createMatch(id: string): LocalMatch {
+export function createMatch(id: string, mode: 'local' | 'computer' = 'local'): LocalMatch {
   return {
     id, gameName: 'Tic-Tac-Toe', board: createBoard(),
     status: 'active', currentTurn: 'X', result: null, source: 'local',
+    ...(mode === 'computer' ? { mode } : {}),
   };
 }
 
