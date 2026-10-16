@@ -1,87 +1,106 @@
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { BuildplayGame, listBuildplayGames } from '../portal/buildplayApi';
 
-// A small local catalog is all we need for the first demo.
-const games = [
-  {
-    name: 'Tic-Tac-Toe', players: '2 players', symbol: 'X O',
-    description: 'A quick classic. Take turns and line up three marks to win.',
-    color: '#e8efff', available: true,
-  },
-  {
-    name: 'Poker', players: '2–6 players', symbol: '♠',
-    description: 'Read the table, build your hand, and enjoy a friendly card game.',
-    color: '#fceee9', available: false,
-  },
-  {
-    name: 'Chinese Checkers', players: '2–6 players', symbol: '◎',
-    description: 'Hop across the board and race your pieces to the opposite corner.',
-    color: '#e8f4ef', available: false,
-  },
-];
+type Props = {
+  search: string;
+  onSearch: (value: string) => void;
+  onChooseGame: (game: BuildplayGame) => void;
+};
 
+function gameSymbol(name: string): string {
+  if (/chess|checkers|checkers/i.test(name)) return '♟';
+  if (/card|poker|rummy|hearts|war|president|truco|golf|ers/i.test(name)) return '♠';
+  if (/connect|gomoku|tictactoe|tic-tac-toe|reversi|sos/i.test(name)) return '◉';
+  return '✦';
+}
 
-type Props = { search: string; onSearch: (value: string) => void; onChooseMode: () => void };
+export default function DiscoverScreen({ search, onSearch, onChooseGame }: Props) {
+  const [games, setGames] = useState<BuildplayGame[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [retry, setRetry] = useState(0);
 
-export default function DiscoverScreen({ search, onSearch, onChooseMode }: Props) {
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setLoadError('');
+    listBuildplayGames().then(available => {
+      if (!cancelled) setGames(available);
+    }).catch(error => {
+      if (!cancelled) setLoadError(error instanceof Error ? error.message : String(error));
+    }).finally(() => {
+      if (!cancelled) setLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [retry]);
+
   const query = search.trim().toLowerCase();
-  const visibleGames = games.filter(game => game.name.toLowerCase().includes(query));
+  const visibleGames = games.filter(game =>
+    game.name.toLowerCase().includes(query) || game.description.toLowerCase().includes(query),
+  );
+
   return (
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
-          <Text style={styles.brand} accessibilityRole="header">GamePortal</Text>
-          <Text style={styles.eyebrow}>DISCOVER</Text>
-          <Text style={styles.heading} accessibilityRole="header">What would you like to play?</Text>
-          <Text style={styles.subtitle}>Find a game. Bring a friend. Have some fun.</Text>
+    <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
+      <Text style={styles.brand} accessibilityRole="header">GamePortal</Text>
+      <Text style={styles.eyebrow}>DISCOVER</Text>
+      <Text style={styles.heading} accessibilityRole="header">What would you like to play?</Text>
+      <Text style={styles.subtitle}>Choose any game from buildplay.fun and invite other players with its match ID.</Text>
 
-          <TextInput
-            style={styles.search}
-            placeholder="Search games"
-            placeholderTextColor="#64748b"
-            accessibilityLabel="Search games"
-            value={search}
-            onChangeText={onSearch}
-            autoCorrect={false}
-            autoCapitalize="none"
-            returnKeyType="search"
-          />
+      <TextInput
+        style={styles.search}
+        placeholder="Search games"
+        placeholderTextColor="#64748b"
+        accessibilityLabel="Search games"
+        value={search}
+        onChangeText={onSearch}
+        autoCorrect={false}
+        autoCapitalize="none"
+        returnKeyType="search"
+      />
 
-          <View style={styles.cards}>
-            {visibleGames.map(game => (
-              <View key={game.name} style={styles.card}>
-                <View style={[styles.art, { backgroundColor: game.color }]}>
-                  <Text style={styles.symbol} accessible={false}>{game.symbol}</Text>
-                </View>
-                <View style={styles.cardBody}>
-                  <Text style={styles.gameName} accessibilityRole="header">{game.name}</Text>
-                  <Text style={styles.players}>{game.players}</Text>
-                  <Text style={styles.description}>{game.description}</Text>
-                  <Pressable
-                    accessibilityRole="button"
-                    accessibilityLabel={game.available ? 'Choose Mode for Tic-Tac-Toe' : game.name + ' coming soon'}
-                    disabled={!game.available}
-                    onPress={onChooseMode}
-                    style={({ pressed }) => [
-                      styles.button,
-                      !game.available && styles.disabledButton,
-                      pressed && styles.pressed,
-                    ]}
-                  >
-                    <Text style={[styles.buttonText, !game.available && styles.disabledText]}>
-                      {game.available ? 'Choose Mode' : 'Coming soon'}
-                    </Text>
-                  </Pressable>
-                </View>
-              </View>
-            ))}
+      {loading ? <Text style={styles.empty}>Loading games from buildplay.fun…</Text> : null}
+      {loadError ? (
+        <View style={styles.errorPanel}>
+          <Text style={styles.error}>{loadError}</Text>
+          <Pressable accessibilityRole="button" onPress={() => setRetry(current => current + 1)} style={styles.retryButton}>
+            <Text style={styles.retryText}>Try again</Text>
+          </Pressable>
+        </View>
+      ) : null}
+
+      <View style={styles.cards}>
+        {visibleGames.map((game, index) => (
+          <View key={`${game.id}:${game.version}`} style={styles.card}>
+            <View style={[styles.art, { backgroundColor: colors[index % colors.length] }]}>
+              <Text style={styles.symbol} accessible={false}>{gameSymbol(game.name)}</Text>
+            </View>
+            <View style={styles.cardBody}>
+              <Text style={styles.gameName} accessibilityRole="header">{game.name}</Text>
+              <Text style={styles.players}>{game.allowed_player_counts.join(', ')} players</Text>
+              <Text style={styles.description}>{game.description}</Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Play ${game.name} online`}
+                onPress={() => onChooseGame(game)}
+                style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+              >
+                <Text style={styles.buttonText}>{game.id === 'tictactoe' ? 'Choose Mode' : 'Play Online'}</Text>
+              </Pressable>
+            </View>
           </View>
-          {visibleGames.length === 0 && (
-            <Text style={styles.empty}>No games found. Try another name.</Text>
-          )}
-        </ScrollView>
+        ))}
+      </View>
+      {!loading && !loadError && visibleGames.length === 0 ? (
+        <Text style={styles.empty}>No games found. Try another name.</Text>
+      ) : null}
+    </ScrollView>
   );
 }
 
+const colors = ['#e8efff', '#fceee9', '#e8f4ef', '#f3eafe'];
+
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: '#f6f8fc' },
   content: { width: '100%', maxWidth: 1000, alignSelf: 'center', padding: 24, paddingBottom: 48 },
   brand: { fontSize: 24, fontWeight: '800', color: '#1e3a8a', marginBottom: 40 },
   eyebrow: { fontSize: 12, fontWeight: '700', letterSpacing: 2, color: '#64748b', marginBottom: 10 },
@@ -98,11 +117,10 @@ const styles = StyleSheet.create({
   description: { fontSize: 15, lineHeight: 23, color: '#64748b', marginTop: 12, marginBottom: 24, flexGrow: 1 },
   button: { minHeight: 48, borderRadius: 10, backgroundColor: '#2855c5', alignItems: 'center', justifyContent: 'center', padding: 12 },
   buttonText: { fontSize: 15, fontWeight: '700', color: '#fff' },
-  disabledButton: { backgroundColor: '#edf1f7' },
-  disabledText: { color: '#64748b' },
-  pressed: { opacity: 0.8 },
   empty: { fontSize: 16, color: '#64748b', textAlign: 'center', paddingVertical: 32 },
+  errorPanel: { backgroundColor: '#fff', padding: 16, borderColor: '#fecaca', borderWidth: 1, borderRadius: 12, marginBottom: 20 },
+  error: { color: '#b91c1c', fontSize: 14 },
+  retryButton: { alignSelf: 'flex-start', marginTop: 12, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 8, backgroundColor: '#2855c5' },
+  retryText: { color: '#fff', fontWeight: '700' },
+  pressed: { opacity: 0.8 },
 });
-
-
-

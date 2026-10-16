@@ -7,12 +7,21 @@ export type LocalMatch = {
   status: 'active' | 'finished';
   currentTurn: Player | null;
   result: Player | 'draw' | null;
+  source: 'local' | 'online';
+  serverMatchId?: string;
+  playerIndex?: number;
+  gameId?: string;
+  gameVersion?: number;
+  gameCode?: string;
+  allowedPlayerCounts?: number[];
+  serverStatus?: 'waiting_for_players' | 'ongoing' | 'over';
+  onlineState?: unknown;
 };
 
 export function createMatch(id: string): LocalMatch {
   return {
     id, gameName: 'Tic-Tac-Toe', board: createBoard(),
-    status: 'active', currentTurn: 'X', result: null,
+    status: 'active', currentTurn: 'X', result: null, source: 'local',
   };
 }
 
@@ -31,6 +40,17 @@ export function moveInMatch(matches: LocalMatch[], id: string, index: number): L
 }
 
 export function matchStatusLabel(match: LocalMatch): string {
+  if (match.source === 'online') {
+    if (match.result === 'draw') return 'Draw';
+    if (match.result) return `${match.result} won`;
+    if (match.serverStatus === 'waiting_for_players') return 'Waiting for players';
+    if (match.serverStatus === 'over') return 'Match finished';
+    if (match.serverStatus === 'ongoing' && match.onlineState && typeof match.onlineState === 'object') {
+      const onlineMatch = match.onlineState as { turn_of_player_indices?: number[] | null };
+      const turn = onlineMatch.turn_of_player_indices?.[0];
+      return turn === match.playerIndex ? 'Your turn' : 'Opponent’s turn';
+    }
+  }
   if (match.result === 'draw') return 'Draw';
   if (match.result) return `${match.result} won`;
   return `Player ${match.currentTurn}'s turn`;

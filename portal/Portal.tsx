@@ -4,17 +4,20 @@ import DiscoverScreen from '../screens/DiscoverScreen';
 import MyMatchesScreen from '../screens/MyMatchesScreen';
 import ModeSelection from '../components/ModeSelection';
 import TicTacToeGame from '../games/TicTacToeGame';
-import OnlineTicTacToeGame from '../games/OnlineTicTacToeGame';
+import OnlineBuildplayGame from '../games/OnlineBuildplayGame';
+import OnlineMatchSnapshot from '../games/OnlineMatchSnapshot';
 import useLocalMatches from './useLocalMatches';
+import { BuildplayGame } from './buildplayApi';
 
 export default function Portal() {
   const [tab, setTab] = useState<'discover' | 'matches'>('discover');
   const [search, setSearch] = useState('');
-  const { matches, loaded, loadError, saveStatus, retryLoad, startMatch, move } = useLocalMatches();
+  const { matches, loaded, loadError, saveStatus, retryLoad, startMatch, move, saveOnlineMatch } = useLocalMatches();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [computerGame, setComputerGame] = useState(false);
   const [onlineGame, setOnlineGame] = useState(false);
   const [showModes, setShowModes] = useState(false);
+  const [selectedGame, setSelectedGame] = useState<BuildplayGame | null>(null);
 
   const selectedMatch = matches.find(match => match.id === selectedId);
 
@@ -63,23 +66,27 @@ export default function Portal() {
           ? 'Could not save matches. Keep the app open; your next move will retry.' : 'Matches saved on this device.'}
       </Text>
       {selectedMatch ? (
-        <TicTacToeGame key={selectedMatch.id} mode="local" onBack={leaveGame}
-          localMatch={{
-            id: selectedMatch.id,
-            board: selectedMatch.board,
-            onMove: index => move(selectedMatch.id, index),
-            onPlayAgain: startLocalMatch,
-          }} />
+        selectedMatch.source === 'online' ? (
+          <OnlineMatchSnapshot key={selectedMatch.id} match={selectedMatch} onBack={leaveGame} />
+        ) : (
+          <TicTacToeGame key={selectedMatch.id} mode="local" onBack={leaveGame}
+            localMatch={{
+              id: selectedMatch.id,
+              board: selectedMatch.board,
+              onMove: index => move(selectedMatch.id, index),
+              onPlayAgain: startLocalMatch,
+            }} />
+        )
       ) : computerGame ? (
         <TicTacToeGame mode="computer" onBack={leaveGame} />
       ) : onlineGame ? (
-        <OnlineTicTacToeGame onBack={leaveGame} />
+        selectedGame ? <OnlineBuildplayGame game={selectedGame} onBack={leaveGame} onSaveMatch={saveOnlineMatch} /> : null
       ) : tab === 'discover' ? (
-        <DiscoverScreen search={search} onSearch={setSearch} onChooseMode={() => setShowModes(true)} />
+        <DiscoverScreen search={search} onSearch={setSearch} onChooseGame={game => { setSelectedGame(game); setShowModes(true); }} />
       ) : (
         <MyMatchesScreen matches={matches} onOpen={setSelectedId} />
       )}
-      <ModeSelection visible={showModes} onClose={() => setShowModes(false)}
+      <ModeSelection visible={showModes} game={selectedGame} onClose={() => setShowModes(false)}
         onLocal={startLocalMatch}
         onComputer={() => { setShowModes(false); setComputerGame(true); }}
         onOnline={() => { setShowModes(false); setOnlineGame(true); }} />
@@ -94,5 +101,3 @@ const styles = StyleSheet.create({
   label: { fontSize: 15, fontWeight: '700', color: '#334155' },
   selectedLabel: { color: '#fff' },
 });
-
-

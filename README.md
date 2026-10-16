@@ -2,7 +2,7 @@
 
 A React Native game portal built with Expo SDK 54 and TypeScript for the Multiplayer Games course.
 
-The current prototype allows users to discover games, choose a play mode, play Tic-Tac-Toe locally, via internet, or against a computer opponent, and manage local matches across sessions.
+The app loads the available game catalog from buildplay.fun, embeds those games for online multiplayer, and saves local snapshots that remain viewable offline.
 
 ## Features
 
@@ -12,41 +12,40 @@ The current prototype allows users to discover games, choose a play mode, play T
 - Choose a game mode
 - Responsive layout for web and mobile
 
-### Tic-Tac-Toe
-- Local and Internet 2-player mode
-- Vs Computer mode
-- Turn management
-- Win and draw detection
-- Play Again
-- Finished boards are locked
+### Games
+- Browse and search games available on buildplay.fun
+- Play the hosted games in the app using the platform's shared game protocol
+- Create or join online matches by match ID
+- Tic-Tac-Toe additionally supports local 2-player and computer modes
 
 The computer opponent uses a simple strategy:
 1. Make a winning move if available
 2. Block an immediate player win
 3. Otherwise choose an available square
 
-Online Multiplayer is shown as a future mode but is not implemented.
+Online multiplayer creates, joins, and updates matches through the buildplay.fun REST API. Match state is refreshed while a game is open. Share the match ID with other players.
 
 ### My Matches
-Local 2-player matches are tracked in the portal.
+Local and online matches are tracked in the portal.
 
 Matches are separated into:
-- Active — unfinished games that can be resumed
-- Finished — completed games that can be viewed but not modified
+- Active — unfinished local games can be resumed; online games show their latest snapshot
+- Finished — completed games can be viewed but not modified
+- Online snapshots cache the hosted game and complete match state, so they remain viewable offline; offline snapshots are read-only
 
-Match state includes the board, current turn, result, and match ID.
+Local Tic-Tac-Toe matches and online snapshots are saved using AsyncStorage.
 
 ### Local Persistence
 Local matches are saved using AsyncStorage.
 
 After reloading the app or browser:
-- Active matches can still be resumed
+- Active local Tic-Tac-Toe matches can still be resumed
 - Finished matches remain available
-- Board state and results are restored
+- Online match snapshots, including the hosted game view and current game state, remain available offline
 - Match IDs remain stable
 - New matches receive new IDs
 
-Vs Computer games are currently independent and are not persisted.
+The app creates an anonymous buildplay.fun user the first time online play is used and stores its API credentials on the device so the same player can rejoin matches. Vs Computer games are not persisted.
 
 ## Tech Stack
 
@@ -58,18 +57,26 @@ Vs Computer games are currently independent and are not persisted.
 ## Project Structure
 
     components/
+        HostedGameView.native.tsx
+        HostedGameView.web.tsx
         ModeSelection.tsx
 
     games/
+        OnlineMatchSnapshot.tsx
+        OnlineBuildplayGame.tsx
         TicTacToeGame.tsx
         ticTacToe.ts
         ticTacToe.test.cjs
 
     portal/
+        buildplayApi.ts
+        buildplayGameProtocol.ts
         Portal.tsx
         matches.ts
         matchStorage.ts
         useLocalMatches.ts
+        buildplayApi.test.cjs
+        buildplayGameProtocol.test.cjs
         matches.test.cjs
         matchStorage.test.cjs
 
@@ -96,27 +103,11 @@ Or start Expo:
 
     npm start
 
-### Play online over a local network
+### Play online
 
-Run the game server and Expo web app in separate terminals, on the same computer:
+The Discover screen loads the public game catalog from buildplay.fun. Games are rendered from their hosted HTML and send moves through the platform's match API. No local game server or shared Wi-Fi network is required. Optionally override the API origin with `EXPO_PUBLIC_BUILDPLAY_API_URL`; it defaults to `https://buildplay.fun`.
 
-    npm run server
-    npm run web -- --host lan
-
-Open the Expo LAN URL on the host computer and the second device. The web client
-uses the page's hostname to connect to the game server on port 4010. Both devices
-must be on the same network, and the host firewall must allow inbound connections
-to ports 8081 (Expo) and 4010 (game server). Do not use `localhost` from the
-second device; it refers to that device itself.
-
-For the Android emulator, the game client uses `10.0.2.2` to reach the host
-computer. For a physical device running the native app, set
-`EXPO_PUBLIC_GAME_SERVER_URL` to the host computer's LAN address, for example:
-
-    EXPO_PUBLIC_GAME_SERVER_URL=ws://192.168.1.20:4010 npm start -- --host lan
-
-Replace the example address with the host computer's actual LAN IP. The game
-server still needs to be running, and its selected port must match the URL.
+Choose a game, create a match on one device, and share its match ID. Other players select the same game and join with that ID. Players need an internet connection to play. My Matches keeps the hosted game and latest match state as a local snapshot for offline viewing.
 
 For mobile testing, use Expo Go with a version compatible with Expo SDK 54.
 
@@ -136,35 +127,26 @@ Run the Expo web export:
 
     npx expo export --platform web
 
-The current implementation passes 22 automated tests as well as the TypeScript and Expo web export checks.
-To include online Multiplayer testing, run in a second terminal window:
-
-    npm run server
-
-Then you can test on an android device or through a web browser
+Online play and game discovery require internet access to buildplay.fun. Automated tests cover the API request protocol and persisted local and online match snapshots.
 
 ## Demo Flow
 
 A simple demo of the current portal:
 
-1. Open Discover and search for Tic-Tac-Toe.
-2. Choose Local 2 Players.
-3. Make a few moves and return to the portal.
-4. Open My Matches and find the game under Active.
-5. Resume the match and finish the game.
-6. Confirm that it moves to Finished.
-7. Reload the app and confirm that the match is still saved.
-8. Open the finished match and confirm that the board is locked.
-9. Return to Discover and demonstrate Vs Computer.
+1. Open Discover and browse or search the buildplay.fun game catalog.
+2. Choose a game and create an online match.
+3. Share its match ID with the number of players supported by that game.
+4. Play several moves and return to the portal.
+5. Open My Matches and confirm the game's snapshot is saved.
+6. Turn off internet access and open the snapshot to verify the game and state remain viewable.
+7. Return to Discover and demonstrate a local Tic-Tac-Toe mode.
 
 ## Current Scope
 
-This prototype focuses on the React Native portal experience and local gameplay.
+This prototype focuses on the React Native portal experience and games hosted by buildplay.fun.
 
 Currently not implemented:
-- Authentication
-- Backend integration
 - Invitations
 - Notifications
 
-These are intentionally outside the scope of the current demo.
+Online users are anonymous device-local accounts; account linking and recovery are not implemented. Offline online-match snapshots are view-only.

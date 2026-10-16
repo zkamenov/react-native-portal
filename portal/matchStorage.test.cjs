@@ -75,6 +75,62 @@ test('O wins and draws retain their finished result across reload', async () => 
   }
 });
 
+test('online match snapshots are stored and restored for offline viewing', async () => {
+  const storage = memoryStorage();
+  const online = {
+    ...createMatch('4'),
+    source: 'online',
+    serverMatchId: 'buildplay-match-123',
+    playerIndex: 1,
+  };
+  online.board = ['X', null, null, null, 'O', null, null, null, null];
+  online.currentTurn = 'X';
+  const repository = createMatchStorage(storage);
+  await repository.save([online]);
+  const restored = await repository.load();
+  assert.deepEqual(plain(restored), plain([online]));
+  assert.equal(restored[0].serverMatchId, online.serverMatchId);
+  assert.equal(restored[0].source, 'online');
+  assert.equal(restored[0].board[4], 'O');
+});
+
+test('non-Tic-Tac-Toe online snapshots keep their hosted game and full state offline', async () => {
+  const storage = memoryStorage();
+  const online = {
+    ...createMatch('8'),
+    gameName: 'Gomoku',
+    source: 'online',
+    serverMatchId: 'gomoku-match',
+    playerIndex: 0,
+    gameId: 'gomoku-game',
+    gameVersion: 3,
+    gameCode: '<!doctype html><html><body>Gomoku</body></html>',
+    serverStatus: 'ongoing',
+    onlineState: {
+      id: 'gomoku-match',
+      game_id: 'gomoku-game',
+      game_version: 3,
+      owner_user_id: 'user-1',
+      status: 'ongoing',
+      end_reason: null,
+      players: [{ player_index: 0, kind: 'human', user_id: 'user-1' }],
+      turn_of_player_indices: [0],
+      state: { board: Array(225).fill(0), last: 112 },
+      move_count: 1,
+    },
+  };
+  online.board = Array(9).fill(null);
+  online.currentTurn = null;
+  online.result = null;
+  const repository = createMatchStorage(storage);
+  await repository.save([online]);
+  const restored = await repository.load();
+  assert.deepEqual(plain(restored), plain([online]));
+  assert.equal(restored[0].gameName, 'Gomoku');
+  assert.equal(restored[0].gameCode, online.gameCode);
+  assert.equal(restored[0].onlineState.state.board.length, 225);
+});
+
 test('queued writes cannot overwrite a newer snapshot with an older one', async () => {
   let release;
   const gate = new Promise(resolve => { release = resolve; });
@@ -117,7 +173,7 @@ test('load errors and invalid saved data are reported rather than silently erase
     async setItem() { assert.fail('load must not write'); },
   });
   await assert.rejects(repository.load(), /read failed/);
-  for (const raw of ['{', 'null', '{"version":2,"matches":[]}',
+  for (const raw of ['{', 'null', '{"version":4,"matches":[]}',
     JSON.stringify({version:1,matches:[createMatch('1'),createMatch('1')]}),
     JSON.stringify({version:1,matches:[{...createMatch('1'),board:[]}]}),
     JSON.stringify({version:1,matches:[{...createMatch('1'),currentTurn:'O'}]}),

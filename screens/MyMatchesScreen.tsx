@@ -7,7 +7,7 @@ export default function MyMatchesScreen({ matches, onOpen }: Props) {
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <Text style={styles.title} accessibilityRole="header">My Matches</Text>
-      <Text style={styles.note}>Local games saved on this device.</Text>
+      <Text style={styles.note}>Games saved on this device. Online matches show their latest saved snapshot.</Text>
       {(['active', 'finished'] as const).map(status => {
         const section = matches.filter(match => match.status === status);
         return (
@@ -18,7 +18,9 @@ export default function MyMatchesScreen({ matches, onOpen }: Props) {
               <Pressable key={match.id} accessibilityRole="button" onPress={() => onOpen(match.id)}
                 style={({ pressed }) => [styles.card, pressed && { opacity: 0.8 }]}>
                 <Text style={styles.name}>{match.gameName}</Text>
-                <Text style={styles.note}>Match {match.id}</Text>
+                <Text style={styles.note}>{match.source === 'online'
+                  ? `Online match ${match.serverMatchId} · saved offline`
+                  : `Match ${match.id}`}</Text>
                 <Text style={styles.status}>{matchStatusLabel(match)}</Text>
               </Pressable>
             ))}
@@ -39,4 +41,3 @@ const styles = StyleSheet.create({
   name: { fontSize: 21, fontWeight: '700', color: '#172033' },
   status: { fontSize: 16, fontWeight: '600', color: '#1e3a8a' },
 });
-
