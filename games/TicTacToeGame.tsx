@@ -6,11 +6,12 @@ type Props = {
   onBack: () => void;
   mode?: 'local' | 'computer';
   localMatch?: { id: string; board: Board; onMove: (index: number) => void; onPlayAgain: () => void };
+  readOnlyMatch?: { id: string; board: Board };
 };
 
-export default function TicTacToeGame({ onBack, mode = 'local', localMatch }: Props) {
+export default function TicTacToeGame({ onBack, mode = 'local', localMatch, readOnlyMatch }: Props) {
   const [internalBoard, setBoard] = useState(createBoard);
-  const board = localMatch?.board ?? internalBoard;
+  const board = readOnlyMatch?.board ?? localMatch?.board ?? internalBoard;
   const result = getResult(board);
   const computerTurn = mode === 'computer' && result === null && getCurrentPlayer(board) === 'O';
   const status = result === 'draw'
@@ -23,6 +24,11 @@ export default function TicTacToeGame({ onBack, mode = 'local', localMatch }: Pr
   useEffect(() => {
     if (!computerTurn) return;
     const timer = setTimeout(() => {
+      if (localMatch) {
+        const index = chooseComputerMove(board);
+        if (index !== null) localMatch.onMove(index);
+        return;
+      }
       setBoard(current => {
         // Ignore a stale callback after Play Again.
         if (current !== board) return current;
@@ -31,7 +37,7 @@ export default function TicTacToeGame({ onBack, mode = 'local', localMatch }: Pr
       });
     }, 400);
     return () => clearTimeout(timer);
-  }, [board, computerTurn]);
+  }, [board, computerTurn, localMatch]);
 
   function handleMove(index: number) {
     if (localMatch) { localMatch.onMove(index); return; }
@@ -47,6 +53,8 @@ export default function TicTacToeGame({ onBack, mode = 'local', localMatch }: Pr
       <Text style={styles.title} accessibilityRole="header">Tic-Tac-Toe</Text>
       <Text style={styles.subtitle}>{mode === 'computer' ? 'Vs Computer · You are X, computer is O' : 'Local 2 Players · Share this device'}</Text>
       {localMatch && <Text style={styles.subtitle}>Match {localMatch.id}</Text>}
+      {readOnlyMatch && <Text style={styles.subtitle}>Online match {readOnlyMatch.id} · saved on this device</Text>}
+      {readOnlyMatch && <Text style={styles.subtitle}>Offline snapshot · reconnect to buildplay.fun to continue playing.</Text>}
       <Text style={styles.status} accessibilityLiveRegion="polite">{status}</Text>
       <View style={styles.board}>
         {board.map((square, index) => (
@@ -54,7 +62,7 @@ export default function TicTacToeGame({ onBack, mode = 'local', localMatch }: Pr
             key={index}
             accessibilityRole="button"
             accessibilityLabel={`Row ${Math.floor(index / 3) + 1}, column ${index % 3 + 1}: ${square ?? 'empty'}`}
-            disabled={square !== null || result !== null || computerTurn}
+            disabled={Boolean(readOnlyMatch) || square !== null || result !== null || computerTurn}
             onPress={() => handleMove(index)}
             style={({ pressed }) => [styles.square, pressed && styles.pressed]}
           >
@@ -63,10 +71,12 @@ export default function TicTacToeGame({ onBack, mode = 'local', localMatch }: Pr
         ))}
       </View>
       <View style={styles.actions}>
-        <Pressable accessibilityRole="button" onPress={() => localMatch ? localMatch.onPlayAgain() : setBoard(createBoard())}
-          style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-          <Text style={styles.buttonText}>Play Again</Text>
-        </Pressable>
+        {!readOnlyMatch && (
+          <Pressable accessibilityRole="button" onPress={() => localMatch ? localMatch.onPlayAgain() : setBoard(createBoard())}
+            style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+            <Text style={styles.buttonText}>Play Again</Text>
+          </Pressable>
+        )}
         <Pressable accessibilityRole="button" onPress={onBack}
           style={({ pressed }) => [styles.button, styles.back, pressed && styles.pressed]}>
           <Text style={styles.backText}>Back to Games</Text>
@@ -93,5 +103,3 @@ const styles = StyleSheet.create({
   backText: { fontSize: 16, fontWeight: '700', color: '#334155' },
   pressed: { opacity: 0.8 },
 });
-
-

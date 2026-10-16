@@ -1,35 +1,46 @@
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { BuildplayGame } from '../portal/buildplayApi';
 
 type Props = {
   visible: boolean;
+  game: BuildplayGame | null;
+  downloaded: boolean;
   onLocal: () => void;
   onComputer: () => void;
+  onOnline: () => void;
   onClose: () => void;
 };
 
-export default function ModeSelection({ visible, onLocal, onComputer, onClose }: Props) {
+export default function ModeSelection({ visible, game, downloaded, onLocal, onComputer, onOnline, onClose }: Props) {
+  const hasLocalModes = game?.id === 'tictactoe';
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={styles.overlay}>
         <View style={styles.panel} accessibilityViewIsModal>
           <ScrollView contentContainerStyle={styles.content}>
             <Text style={styles.title} accessibilityRole="header">Choose Mode</Text>
-            <Text style={styles.subtitle}>Tic-Tac-Toe</Text>
-            <Pressable accessibilityRole="button" onPress={onLocal}
+            <Text style={styles.subtitle}>{game?.name ?? 'Select a game'}</Text>
+            {hasLocalModes ? (
+              <>
+                <Pressable accessibilityRole="button" onPress={onLocal}
+                  style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+                  <Text style={styles.buttonText}>Local 2 Players</Text>
+                </Pressable>
+                <Pressable accessibilityRole="button" onPress={onComputer}
+                  style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+                  <Text style={styles.buttonText}>Vs Computer</Text>
+                </Pressable>
+              </>
+            ) : null}
+            {!hasLocalModes && downloaded ? (
+              <Text style={styles.comingSoon}>
+                Offline computer play is not available for this game yet. It needs a game-specific opponent.
+              </Text>
+            ) : null}
+            <Pressable accessibilityRole="button" onPress={onOnline}
               style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-              <Text style={styles.buttonText}>Local 2 Players</Text>
+              <Text style={styles.buttonText}>Online Multiplayer</Text>
             </Pressable>
-            <Pressable accessibilityRole="button" onPress={onComputer}
-              style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
-              <Text style={styles.buttonText}>Vs Computer</Text>
-            </Pressable>
-            {['Online Multiplayer'].map(mode => (
-              <Pressable key={mode} accessibilityRole="button" disabled
-                accessibilityLabel={mode + ', coming soon'} style={[styles.button, styles.disabled]}>
-                <Text style={styles.disabledText}>{mode}</Text>
-                <Text style={styles.comingSoon}>Coming soon</Text>
-              </Pressable>
-            ))}
             <Pressable accessibilityRole="button" onPress={onClose}
               style={({ pressed }) => [styles.button, styles.disabled, pressed && styles.pressed]}>
               <Text style={styles.disabledText}>Back to Games</Text>
@@ -54,4 +65,3 @@ const styles = StyleSheet.create({
   comingSoon: { fontSize: 13, color: '#64748b', marginTop: 4 },
   pressed: { opacity: 0.8 },
 });
-
